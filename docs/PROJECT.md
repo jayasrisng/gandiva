@@ -16,7 +16,7 @@ Gandiva is a private product truth studio for small businesses. Merchants supply
 
 ## Setup status — October 6, 2026
 
-The Gandiva runtime connection has been verified against this live Supabase project. The initial application schema and a metadata-only documentation migration are applied and recorded in migration history. All 11 application tables are accessible through the server connection, all three storage buckets are private, and anonymous product reads are denied. The local Auth callback is `http://localhost:3000/auth/callback`.
+The Gandiva runtime connection has been verified against this live Supabase project. The initial application schema, a metadata-only documentation migration, and a function-security hardening migration are applied and recorded in migration history. All 11 application tables are accessible through the server connection, all three storage buckets are private, and anonymous product reads are denied. The local Auth callback is `http://localhost:3000/auth/callback`.
 
 Supabase already identifies `jayasrisng/gandiva` as its connected repository. Automatic production database deployment and paid preview branching are disabled. Cloudflare hosting and the OpenAI runtime credential still need configuration.
 
@@ -43,7 +43,7 @@ Configure Supabase Auth with `http://localhost:3000` as the local Site URL and `
 
 ## Database and provenance
 
-`supabase/migrations/202610050001_gandiva.sql` creates the initial schema. It is an imperative migration and must be applied once. A subsequent `project_documentation` migration adds schema and table descriptions. Both are recorded as applied in the connected project; do not rerun them. `supabase/verification.sql` contains read-only verification queries. The application tables are `merchant_profiles`, `products`, `product_assets`, `source_transcripts`, `product_descriptions`, `truth_versions`, `generations`, `verification_runs`, `approvals`, `passports`, and `jobs`.
+`supabase/migrations/202610050001_gandiva.sql` creates the initial schema. It is an imperative migration and must be applied once. A subsequent `project_documentation` migration adds schema and table descriptions. `security_hardening` fixes the immutable-trigger search path and restricts a hosted automatic-RLS helper when present. All three migrations are recorded as applied in the connected project; do not rerun them. `supabase/verification.sql` contains read-only verification queries. The application tables are `merchant_profiles`, `products`, `product_assets`, `source_transcripts`, `product_descriptions`, `truth_versions`, `generations`, `verification_runs`, `approvals`, `passports`, and `jobs`.
 
 Owner-based row-level security separates merchants. Authenticated clients can read their own rows; privileged writes pass through authenticated server endpoints and service-only workflow functions. Originals, generated images, and audio are in private storage buckets with signed access. Completed evidence and final passports are immutable.
 

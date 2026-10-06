@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 import { truth, report } from "./fixtures/truth.ts";
 const owner = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -15,12 +15,17 @@ test("PostgreSQL transactions enforce the full versioned truth loop and tenant i
  create schema storage; create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint); create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text); alter table storage.objects enable row level security;
  create function storage.foldername(text) returns text[] language sql as $$ select string_to_array($1,'/') $$;
  grant usage on schema public,auth,storage to authenticated; grant select on storage.objects to authenticated; grant execute on function auth.uid() to authenticated;`);
-  const sql = await readFile(
-    new URL("../supabase/migrations/202610050001_gandiva.sql", import.meta.url),
-    "utf8",
+  const migrationDirectory = new URL(
+    "../supabase/migrations/",
+    import.meta.url,
   );
-  // PGlite has core gen_random_uuid(); the extension installation is a Supabase setup step.
-  await db.exec(sql.replace("create extension if not exists pgcrypto;", ""));
+  for (const name of (await readdir(migrationDirectory))
+    .filter((name) => name.endsWith(".sql"))
+    .sort()) {
+    const sql = await readFile(new URL(name, migrationDirectory), "utf8");
+    // PGlite has core gen_random_uuid(); installing pgcrypto is a hosted setup step.
+    await db.exec(sql.replace("create extension if not exists pgcrypto;", ""));
+  }
   await db.query("insert into auth.users(id) values($1),($2)", [owner, other]);
   const rpc = async (name: string, args: unknown[]) => {
     const placeholders = args.map((_, i) => `$${i + 1}`).join(",");

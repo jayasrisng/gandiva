@@ -1,7 +1,7 @@
 // Local integration harness ONLY. Never imported by application or deployment code.
 // No external network, no live Supabase project, no provider billing.
 import http from "node:http";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 import {
   truth as fixtureTruth,
@@ -13,17 +13,16 @@ export async function mockServices(port = 4100) {
   await db.exec(
     `create role anon; create role authenticated; create role service_role bypassrls; create schema auth; create table auth.users(id uuid primary key,raw_user_meta_data jsonb not null default '{}'); create function auth.uid() returns uuid language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$; create schema storage; create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint); create table storage.objects(id uuid primary key,bucket_id text,name text); create function storage.foldername(text) returns text[] language sql as $$select string_to_array($1,'/')$$;`,
   );
-  await db.exec(
-    (
-      await readFile(
-        new URL(
-          "../supabase/migrations/202610050001_gandiva.sql",
-          import.meta.url,
-        ),
-        "utf8",
-      )
-    ).replace("create extension if not exists pgcrypto;", ""),
+  const migrationDirectory = new URL(
+    "../supabase/migrations/",
+    import.meta.url,
   );
+  for (const name of (await readdir(migrationDirectory))
+    .filter((name) => name.endsWith(".sql"))
+    .sort()) {
+    const sql = await readFile(new URL(name, migrationDirectory), "utf8");
+    await db.exec(sql.replace("create extension if not exists pgcrypto;", ""));
+  }
   await db.query("insert into auth.users(id) values($1)", [owner]);
   const objects = new Map();
   let lastSourceId = "11111111-1111-4111-8111-111111111111";

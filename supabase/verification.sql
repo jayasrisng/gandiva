@@ -12,6 +12,6 @@ select p.proname,
  has_function_privilege('authenticated',p.oid,'EXECUTE') as authenticated_execute,
  has_function_privilege('service_role',p.oid,'EXECUTE') as service_execute
 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-where n.nspname='public' and p.proname like 'gandiva_%' order by p.proname;
+where n.nspname='public' and (p.proname like 'gandiva_%' or p.proname='rls_auto_enable') order by p.proname;
 
 select version,name from supabase_migrations.schema_migrations order by version;
